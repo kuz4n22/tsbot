@@ -52,7 +52,7 @@ public static partial class MainCommands
 			text = link;
 
 		var wasPlaying = playManager.IsPlaying;
-		var ahead = Math.Max(0, playlistManager.CurrentList.Items.Count - playlistManager.Index - 1);
+		var ahead = playManager.RequestsAhead; // radio filler is dropped when a request comes in, so it does not count
 
 		if (QuickPlay.LooksLikeLinkOrPath(link) && QuickPlay.IsPlaylistLink(link))
 		{

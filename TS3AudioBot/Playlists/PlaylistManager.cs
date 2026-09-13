@@ -113,6 +113,27 @@ public sealed class PlaylistManager
 	public void Clear()
 		=> ModifyPlaylist(mixName, mix => mix.Clear());
 
+	/// <summary>
+	/// TSBot: drops songs waiting at the very end of the queue for as long as the predicate
+	/// matches them, and stops at the first one it does not. Used to throw away autoplay filler
+	/// so that a song someone actually asked for plays next instead of behind the radio.
+	/// </summary>
+	public int DropTrailing(Func<PlaylistItem, bool> match)
+	{
+		var dropped = 0;
+		ModifyPlaylist(mixName, mix =>
+		{
+			for (int i = mix.Items.Count - 1; i > Index; i--)
+			{
+				if (!match(mix[i]))
+					break;
+				mix.RemoveAt(i);
+				dropped++;
+			}
+		});
+		return dropped;
+	}
+
 	private void SetRandomSeed()
 	{
 		shuffle.Seed = Tools.Random.Next();

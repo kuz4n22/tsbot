@@ -33,8 +33,27 @@ public class PlayManager
 	/// <summary>TSBot: true when the playing song is the last one in the queue.</summary>
 	private bool AtEndOfQueue => playlistManager.Index >= playlistManager.CurrentList.Items.Count - 1;
 
+	/// <summary>TSBot: marks a track the autoplay radio added, so requests can jump ahead of it.</summary>
+	private const string RadioTag = "tsbot_radio";
+
 	/// <summary>TSBot: how many related tracks autoplay queues at a time (a new batch follows when they run out).</summary>
-	private const int AutoplayBatchSize = 25;
+	private const int AutoplayBatchSize = 10;
+
+	/// <summary>TSBot: true for filler the radio added, false for anything a person asked for.</summary>
+	public static bool IsRadio(PlaylistItem item) => item.AudioResource.Get(RadioTag) != null;
+
+	/// <summary>TSBot: songs people actually asked for that are still waiting (radio filler does not count).</summary>
+	public int RequestsAhead => playlistManager.CurrentList.Items
+		.Skip(playlistManager.Index + 1)
+		.Count(item => !IsRadio(item));
+
+	/// <summary>TSBot: the radio is filler - a request takes its place instead of queueing behind it.</summary>
+	private void DropPendingRadio()
+	{
+		var dropped = playlistManager.DropTrailing(IsRadio);
+		if (dropped > 0)
+			Log.Debug("Dropped {0} queued radio track(s) to make room for a request", dropped);
+	}
 
 	private readonly ConfBot confBot;
 	private readonly Player playerConnection;
@@ -75,15 +94,25 @@ public class PlayManager
 	}
 	public Task Enqueue(InvokerData invoker, IEnumerable<PlaylistItem> items)
 	{
+		DropPendingRadio();
 		var startOff = playlistManager.CurrentList.Items.Count;
 		playlistManager.Queue(items.Select(x => UpdateItem(x, invoker)));
 		return PostEnqueue(invoker, startOff);
 	}
 	public Task Enqueue(InvokerData invoker, PlaylistItem item)
 	{
+		DropPendingRadio();
 		var startOff = playlistManager.CurrentList.Items.Count;
 		playlistManager.Queue(UpdateItem(item, invoker));
 		return PostEnqueue(invoker, startOff);
+	}
+
+	/// <summary>TSBot: stamps a track as radio filler; the stamp travels with the queue, restarts included.</summary>
+	private static PlaylistItem MarkAsRadio(PlaylistItem item)
+	{
+		if (item.AudioResource.Get(RadioTag) is null)
+			item.AudioResource.Add(RadioTag, "1");
+		return item;
 	}
 
 	private static PlaylistItem UpdateItem(PlaylistItem item, InvokerData invoker)
@@ -351,7 +380,7 @@ public class PlayManager
 			return 0;
 		}
 
-		playlistManager.Queue(fresh.Select(x => UpdateItem(x, last.Invoker)));
+		playlistManager.Queue(fresh.Select(x => UpdateItem(MarkAsRadio(x), last.Invoker)));
 		Log.Info("Autoplay: queued {0} related track(s) from the mix of {1}", fresh.Count, ar.ResourceId);
 		return fresh.Count;
 	}
