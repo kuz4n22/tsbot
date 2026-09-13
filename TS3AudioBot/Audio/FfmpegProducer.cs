@@ -35,6 +35,8 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 	private const string PostLinkConf = "\" -ac 2 -ar 48000 -f s16le -acodec pcm_s16le pipe:1";
 	private const string LinkConfIcy = "-hide_banner -nostats -threads 1 -i pipe:0 -ac 2 -ar 48000 -f s16le -acodec pcm_s16le pipe:1";
 	private static readonly TimeSpan retryOnDropBeforeEnd = TimeSpan.FromSeconds(10);
+	/// <summary>TSBot: a stream that has not produced a single sample after this long is not going to.</summary>
+	private static readonly TimeSpan StartSilenceTimeout = TimeSpan.FromSeconds(8);
 
 	private readonly ConfToolsFfmpeg config;
 
@@ -121,14 +123,47 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 			}
 		}
 
+		if (read > 0 && !instance.ProducedData)
+		{
+			instance.ProducedData = true; // TSBot: the stream is alive, no need to watch it any more
+			instance.SilenceWatchdog?.Dispose();
+			instance.SilenceWatchdog = null;
+		}
+
 		instance.HasTriedToReconnect = false;
 		instance.ReconnectAttempts = 0;
 		instance.AudioTimer.PushBytes(read);
 		return read;
 	}
 
+	/// <summary>TSBot: drops a stream that opened but stayed silent, so the audio thread stops waiting on it.</summary>
+	private void KillIfSilent(FfmpegInstance instance)
+	{
+		if (instance.ProducedData || instance.Closed || instance.FfmpegProcess.HasExitedSafe())
+			return;
+		Log.Warn("No audio {0:0} s after the stream opened, dropping it", StartSilenceTimeout.TotalSeconds);
+		try { instance.FfmpegProcess.Kill(); }
+		catch (Exception ex) { Log.Debug(ex, "Could not stop the silent ffmpeg"); }
+	}
+
 	private (bool ret, bool trigger) OnReadEmpty(FfmpegInstance instance)
 	{
+		// TSBot: not a single sample came out of a seeked stream - YouTube serves some long files
+		// only from the start. Play the song from the beginning instead of losing it.
+		if (instance.FfmpegProcess.HasExitedSafe() && !instance.ProducedData
+			&& instance.StartOffset > TimeSpan.Zero && instance.ReconnectAttempts < 3)
+		{
+			var seekAttempt = instance.ReconnectAttempts + 1;
+			Log.Warn("No audio after seeking to {0:g}, starting the song from the beginning", instance.StartOffset);
+			if (StartFfmpegProcess(instance.ReconnectUrl, TimeSpan.Zero).Get(out var restarted, out var startError))
+			{
+				restarted.ReconnectAttempts = seekAttempt;
+				return (true, false);
+			}
+			Log.Debug("Restart without seek failed: {0}", startError);
+			return (false, true);
+		}
+
 		if (instance.FfmpegProcess.HasExitedSafe() && instance.ReconnectAttempts < 3)
 		{
 			var expectedStopLength = GetCurrentSongLength();
@@ -222,7 +257,10 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 			new PreciseAudioTimer(SampleInfo)
 			{
 				SongPositionOffset = offset,
-			});
+			})
+		{
+			StartOffset = offset, // TSBot: remembered so a seek YouTube refuses can be retried from the start
+		};
 
 		return StartFfmpegProcessInternal(newInstance, arguments);
 	}
@@ -292,6 +330,9 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 			instance.FfmpegProcess.BeginErrorReadLine();
 
 			instance.AudioTimer.Start();
+			// TSBot: a stream that opens but never delivers audio (YouTube refusing a seek, a dead CDN
+			// edge) would keep the audio thread waiting on the pipe forever - drop it instead.
+			instance.SilenceWatchdog = new Timer(_ => KillIfSilent(instance), null, StartSilenceTimeout, Timeout.InfiniteTimeSpan);
 
 			var oldInstance = Interlocked.Exchange(ref ffmpegInstance, instance);
 			oldInstance?.Close();
@@ -351,6 +392,13 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 		public PreciseAudioTimer AudioTimer { get; }
 		public TimeSpan? ParsedSongLength { get; set; } = null;
 
+		/// <summary>TSBot: where playback was asked to start; zero when the song plays from the beginning.</summary>
+		public TimeSpan StartOffset { get; init; }
+		/// <summary>TSBot: set once the first audio arrives - a stream that never sets it is dead.</summary>
+		public bool ProducedData { get; set; }
+		/// <summary>TSBot: drops the process when it stays silent after starting.</summary>
+		public Timer? SilenceWatchdog { get; set; }
+
 		public Stream? IcyStream { get; }
 		public int IcyMetaInt { get; }
 		public bool Closed { get; set; }
@@ -372,6 +420,8 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 		public void Close()
 		{
 			Closed = true;
+			SilenceWatchdog?.Dispose();
+			SilenceWatchdog = null;
 
 			try
 			{
