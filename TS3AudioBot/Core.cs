@@ -84,7 +84,7 @@ public sealed class Core
 
 		Upgrader.PerformUpgrades(injector);
 		YoutubeDlHelper.DataObj = config.Tools.YoutubeDl;
-		NetworkBypass.Start(config.Tools.Bypass);
+		await NetworkBypass.StartAsync(config.Tools.Bypass);
 
 		injector.GetModuleOrThrow<CommandManager>().RegisterCollection(MainCommands.Bag);
 		injector.GetModuleOrThrow<RightsManager>().CreateConfigIfNotExists(setup.Interactive);

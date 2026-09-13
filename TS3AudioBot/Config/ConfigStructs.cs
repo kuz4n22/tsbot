@@ -83,7 +83,8 @@ public class ConfTools : ConfigTable
 
 public class ConfBypass : ConfigTable
 {
-	public ConfigValue<bool> Enabled { get; } = new("enabled", false, "Start the bypass proxy and route yt-dlp/ffmpeg through it.");
+	public ConfigValue<bool> Enabled { get; } = new("enabled", true, "Keep YouTube working where the provider blocks it. The bot goes out directly whenever it can and only falls back to the bypass while YouTube is unreachable; it re-checks every minute.");
+	public ConfigValue<bool> Always { get; } = new("always", false, "Skip that check and send the bot's yt-dlp/ffmpeg through the bypass no matter what.");
 	public ConfigValue<string> Path { get; } = new("path", "", "Path to ciadpi.exe (ByeDPI). Empty = do not start anything, just use the 'socks' endpoint.");
 	public ConfigValue<string> Args { get; } = new("args", "--ip 127.0.0.1 --port 1080 --auto=torst,ssl_err --split 1+s --disorder 3+s", "Command line for ciadpi.");
 	public ConfigValue<string> Socks { get; } = new("socks", "127.0.0.1:1080", "SOCKS5 endpoint of the bypass proxy.");

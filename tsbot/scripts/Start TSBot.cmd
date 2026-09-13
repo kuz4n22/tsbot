@@ -7,7 +7,6 @@ if not "%RUNNING%"=="0" (echo TSBot is already running. & timeout /t 3 >NUL & ex
 if exist "%~dp0stop.flag" del "%~dp0stop.flag"
 rem 1) keep yt-dlp fresh (YouTube changes often; silently skipped if offline)
 start "" /min /wait "%~dp0bin\yt-dlp.exe" -U
-rem 2) check whether YouTube is reachable directly and tune the bypass proxy accordingly
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0bin\netcheck.ps1" -Apply
-rem 3) run the bot inside a watchdog loop (auto-restart on crash)
+rem 2) run the bot inside a watchdog loop (auto-restart on crash); the bot itself checks
+rem    whether YouTube needs the bypass and switches on its own
 start "TS Music Bot" /min cmd /c ""%~dp0bin\run-loop.cmd""
