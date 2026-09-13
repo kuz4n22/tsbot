@@ -2,7 +2,8 @@
 rem TS Music Bot - start. Console window stays minimized; use "Stop TSBot.cmd" to stop.
 cd /d "%~dp0"
 set "PATH=%~dp0bin;%PATH%"
-tasklist /FI "IMAGENAME eq TS3AudioBot.exe" 2>NUL | find /I "TS3AudioBot.exe" >NUL && (echo TSBot is already running. & timeout /t 3 >NUL & exit /b 0)
+for /f "usebackq" %%c in (`powershell -NoProfile -Command "(Get-Process TS3AudioBot -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '%~dp0*' } | Measure-Object).Count"`) do set "RUNNING=%%c"
+if not "%RUNNING%"=="0" (echo TSBot is already running. & timeout /t 3 >NUL & exit /b 0)
 if exist "%~dp0stop.flag" del "%~dp0stop.flag"
 rem 1) keep yt-dlp fresh (YouTube changes often; silently skipped if offline)
 start "" /min /wait "%~dp0bin\yt-dlp.exe" -U
