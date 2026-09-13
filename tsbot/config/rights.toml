@@ -5,7 +5,7 @@
 	"cmd.help.*", "cmd.pm", "cmd.subscribe", "cmd.unsubscribe", "cmd.kickme.*", "cmd.version",
 	"cmd.song", "cmd.np", "cmd.repeat", "cmd.random",
 	"cmd.if", "cmd.print", "cmd.rng", "cmd.eval", "cmd.take", "cmd.xecute", "cmd.getmy.*", "cmd.json.*", "cmd.bot.use", "cmd.rights.can",
-	"cmd.commands", "cmd.home",
+	"cmd.commands", "cmd.home", "cmd.net",
 	# play controls
 	"cmd.yt", "cmd.play", "cmd.pause", "cmd.stop", "cmd.seek", "cmd.volume", "cmd.jump",
 	"cmd.list.*", "cmd.add", "cmd.clear", "cmd.previous", "cmd.next", "cmd.skip", "cmd.queue", "cmd.info",

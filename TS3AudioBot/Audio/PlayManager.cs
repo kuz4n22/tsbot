@@ -27,6 +27,15 @@ public class PlayManager
 {
 	private static readonly NLog.Logger Log = NLog.LogManager.GetCurrentClassLogger();
 
+	/// <summary>TSBot: guards against two autoplay fetches running at once.</summary>
+	private bool autoplayFetching;
+
+	/// <summary>TSBot: true when the playing song is the last one in the queue.</summary>
+	private bool AtEndOfQueue => playlistManager.Index >= playlistManager.CurrentList.Items.Count - 1;
+
+	/// <summary>TSBot: how many related tracks autoplay queues at a time (a new batch follows when they run out).</summary>
+	private const int AutoplayBatchSize = 25;
+
 	private readonly ConfBot confBot;
 	private readonly Player playerConnection;
 	private readonly PlaylistManager playlistManager;
@@ -226,6 +235,7 @@ public class PlayManager
 		playerConnection.Volume = Tools.Clamp(playerConnection.Volume, confBot.Audio.Volume.Min, confBot.Audio.Volume.Max);
 		CurrentPlayData = playInfo; // TODO meta as readonly
 		await AfterResourceStarted.InvokeAsync(this, playInfo);
+		_ = PrefetchAutoplay(); // TSBot: line up the next radio batch before this song ends
 	}
 
 	public async Task Next(InvokerData invoker, bool manually = true)
@@ -278,17 +288,9 @@ public class PlayManager
 
 		if (songEndedByCallback)
 		{
-			try
-			{
-				await Next(CurrentPlayData?.Invoker ?? InvokerData.Anonymous, false);
+			// TSBot: same path as !skip - next song, or the autoplay radio when the queue is empty
+			if (await NextOrAutoplay(CurrentPlayData?.Invoker ?? InvokerData.Anonymous, false))
 				return;
-			}
-			catch (AudioBotException ex)
-			{
-				Log.Info("Song queue ended: {0}", ex.Message);
-				if (await TryAutoplay())
-					return;
-			}
 		}
 		else
 		{
@@ -299,27 +301,90 @@ public class PlayManager
 		PlaybackStopped?.Invoke(this, EventArgs.Empty);
 	}
 
-	/// <summary>TSBot: when the queue is exhausted, keep the music going with a YouTube radio-mix (RD&lt;id&gt;) seeded from the last song.</summary>
+	/// <summary>
+	/// TSBot: the single way forward through the queue, used both when a song ends on its own
+	/// and by !skip, so the two behave the same. Returns false only when the music cannot go on
+	/// (nothing queued and autoplay off or unavailable).
+	/// </summary>
+	public async Task<bool> NextOrAutoplay(InvokerData invoker, bool manually = true)
+	{
+		// Upstream wraps a manual !next at the end of the queue back to the first song. With the
+		// autoplay radio that is the wrong surprise: the queue is over, so move on rather than back.
+		if (manually && AtEndOfQueue && playlistManager.Loop == LoopMode.Off && !playlistManager.Random
+			&& await TryAutoplay())
+			return true;
+
+		try
+		{
+			await Next(invoker, manually);
+			return true;
+		}
+		catch (AudioBotException ex)
+		{
+			Log.Info("Queue ran out: {0}", ex.Message);
+			return await TryAutoplay();
+		}
+	}
+
+	/// <summary>
+	/// TSBot: takes the YouTube radio mix (RD&lt;id&gt;) of the song playing now and appends a small
+	/// batch of it to the queue. Only tracks nobody has heard in this session are taken, so the
+	/// music keeps drifting instead of looping the same list. Returns how many were added.
+	/// </summary>
+	private async Task<int> QueueAutoplayBatch()
+	{
+		var last = CurrentPlayData;
+		var ar = last?.ResourceData;
+		if (last is null || ar is null || ar.AudioType != "youtube" || string.IsNullOrEmpty(ar.ResourceId))
+			return 0;
+
+		var mixUrl = $"https://www.youtube.com/watch?v={ar.ResourceId}&list=RD{ar.ResourceId}";
+		var plist = await resourceResolver.LoadPlaylistFrom(mixUrl, CancellationToken.None);
+		var known = playlistManager.CurrentList.Items.Select(i => i.AudioResource.ResourceId).ToHashSet();
+		var fresh = plist.Items
+			.Where(i => !known.Contains(i.AudioResource.ResourceId))
+			.Take(AutoplayBatchSize)
+			.ToList();
+		if (fresh.Count == 0)
+		{
+			Log.Info("Autoplay: the mix of {0} had nothing new left", ar.ResourceId);
+			return 0;
+		}
+
+		playlistManager.Queue(fresh.Select(x => UpdateItem(x, last.Invoker)));
+		Log.Info("Autoplay: queued {0} related track(s) from the mix of {1}", fresh.Count, ar.ResourceId);
+		return fresh.Count;
+	}
+
+	/// <summary>
+	/// TSBot: fetches the next batch while the last queued song is still playing, so the music
+	/// never stops to wait for YouTube. Does nothing while there are still songs queued.
+	/// </summary>
+	private async Task PrefetchAutoplay()
+	{
+		if (!confBot.Audio.Autoplay || autoplayFetching || !AtEndOfQueue)
+			return;
+		autoplayFetching = true;
+		try { await QueueAutoplayBatch(); }
+		catch (Exception ex) { Log.Debug(ex, "Autoplay prefetch failed"); }
+		finally { autoplayFetching = false; }
+	}
+
+	/// <summary>TSBot: the queue is empty - fill it from the radio mix and keep playing.</summary>
 	private async Task<bool> TryAutoplay()
 	{
 		if (!confBot.Audio.Autoplay)
 			return false;
-		var last = CurrentPlayData;
-		var ar = last?.ResourceData;
-		if (last is null || ar is null || ar.AudioType != "youtube" || string.IsNullOrEmpty(ar.ResourceId))
+		var invoker = CurrentPlayData?.Invoker;
+		if (invoker is null)
 			return false;
 		try
 		{
-			var mixUrl = $"https://www.youtube.com/watch?v={ar.ResourceId}&list=RD{ar.ResourceId}";
-			var plist = await resourceResolver.LoadPlaylistFrom(mixUrl, CancellationToken.None);
-			var fresh = plist.Items.Where(i => i.AudioResource.ResourceId != ar.ResourceId).ToList();
-			if (fresh.Count == 0)
-				return false;
 			var startOff = playlistManager.CurrentList.Items.Count;
-			playlistManager.Queue(fresh.Select(x => UpdateItem(x, last.Invoker)));
+			if (await QueueAutoplayBatch() == 0)
+				return false;
 			playlistManager.Index = startOff;
-			Log.Info("Autoplay: queued {0} related track(s) from mix of {1}", fresh.Count, ar.ResourceId);
-			await StartCurrent(last.Invoker, false);
+			await StartCurrent(invoker, false);
 			return true;
 		}
 		catch (AudioBotException ex)

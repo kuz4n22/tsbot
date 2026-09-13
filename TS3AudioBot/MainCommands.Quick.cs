@@ -84,16 +84,12 @@ public static partial class MainCommands
 	public static async Task<string> CommandSkip(PlayManager playManager, InvokerData invoker)
 		=> await SkipCurrent(playManager, invoker);
 
-	/// <summary>Skip = drop the current track: play the next one if there is one, otherwise stop (upstream "next" just errors at the end of the queue).</summary>
+	/// <summary>Skip = drop the current track: the next one, or the autoplay radio when the queue is empty (upstream "next" just errors there).</summary>
 	internal static async Task<string> SkipCurrent(PlayManager playManager, InvokerData invoker)
 	{
 		if (!playManager.IsPlaying)
 			throw new CommandException("Сейчас ничего не играет", CommandExceptionReason.CommandError);
-		try
-		{
-			await playManager.Next(invoker);
-		}
-		catch (AudioBotException ex) when (ex.Message == strings.info_playmgr_no_next_song)
+		if (!await playManager.NextOrAutoplay(invoker))
 		{
 			await playManager.Stop();
 			return "⏹ Очередь пуста — остановил";
@@ -142,6 +138,14 @@ public static partial class MainCommands
 		pw.Hashed.Value = false;
 		config.SaveWhenExists().UnwrapThrow();
 		return string.IsNullOrEmpty(password) ? $"🏠 Теперь мой дом — «{channel.Name}»" : $"🏠 Теперь мой дом — «{channel.Name}», пароль запомнил";
+	}
+
+	[Command("net")]
+	[Usage("", "Says how the bot reaches YouTube right now (direct or through the bypass) and checks again.")]
+	public static async Task<string> CommandNet()
+	{
+		await NetworkBypass.RecheckAsync();
+		return "🌐 " + NetworkBypass.Status;
 	}
 
 	[Command("commands")]

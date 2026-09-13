@@ -169,6 +169,12 @@ public sealed class QueueKeeper : IDisposable
 			Log.Warn("queue: could not resume playback: {0}", ex.Message);
 			return;
 		}
+		finally
+		{
+			// the offset is for this one resume only - without this the song would jump back there
+			// every time it is played again (a skip that wraps around, a repeat, a later restart)
+			items[index].PlayInfo = null;
+		}
 		if (snap.Paused)
 			player.Paused = true;
 	}
