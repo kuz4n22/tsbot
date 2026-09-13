@@ -7,6 +7,9 @@ for /f "usebackq" %%c in (`powershell -NoProfile -Command "(Get-Process TS3Audio
 for /f "usebackq" %%w in (`powershell -NoProfile -Command "(Get-CimInstance Win32_Process -Filter \"Name='cmd.exe'\" | Where-Object { $_.CommandLine -like '*%~dp0bin\run-loop.cmd*' } | Measure-Object).Count"`) do set "WATCHDOG=%%w"
 if not "%RUNNING%%WATCHDOG%"=="00" (echo TSBot is already running. & timeout /t 3 >NUL & exit /b 0)
 if exist "%~dp0stop.flag" del "%~dp0stop.flag"
+rem clicking inside a console window puts it in selection mode and blocks everything that writes
+rem to it - turn that off for this window so the bot cannot be frozen by a stray click
+reg add "HKCU\Console\TS Music Bot" /v QuickEdit /t REG_DWORD /d 0 /f >NUL 2>&1
 rem 1) keep yt-dlp fresh (YouTube changes often; silently skipped if offline)
 start "" /min /wait "%~dp0bin\yt-dlp.exe" -U
 rem 2) run the bot inside a watchdog loop (auto-restart on crash); the bot itself checks
