@@ -1,0 +1,55 @@
+# TSBot root config. Placeholders are filled by the installer; the bot adds all other keys with defaults on first save.
+
+[configs]
+send_stats = false
+
+[factories.youtube]
+prefer_resolver = "YoutubeDl"
+
+[tools.youtube-dl]
+path = "{{YTDLP}}"
+
+[tools.ffmpeg]
+path = "{{FFMPEG}}"
+
+[tools.bypass]
+enabled = true
+path = "{{CIADPI}}"
+args = "--ip 127.0.0.1 --port 1080 --timeout 4 --auto-mode 3 --auto=torst,ssl_err --split 1+s --disorder 3+s --auto=torst,ssl_err --tlsrec 3+s --split 1+s --disorder 3+s --auto=torst,ssl_err --disorder 1 --fake -1 --ttl 8 --auto=torst,ssl_err --fake -1 --ttl 5 --tlsrec 3+s --disorder 1 --auto=torst,ssl_err --oob 3+s --split 1+s --auto=torst,ssl_err --split 1+s --disorder 3+s --mod-http=h,d,r"
+socks = "127.0.0.1:1080"
+bridge_port = 58914
+
+[rights]
+path = "rights.toml"
+
+[web]
+hosts = [ "localhost" ]
+port = 58913
+
+[web.interface]
+enabled = true
+path = "WebInterface"
+
+[bot]
+language = "en"
+generate_status_avatar = false
+set_status_description = false
+
+[bot.commands]
+color = true
+long_message = "Split"
+long_message_split_limit = 3
+
+[bot.audio]
+autoplay = true
+bitrate = 96
+send_mode = "voice"
+
+[bot.audio.volume]
+default = 35
+min = 0
+max = 100
+
+[bot.events]
+onalone = "!stop"
+alone_delay = "3m"

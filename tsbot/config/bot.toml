@@ -1,0 +1,12 @@
+run = true
+
+[connect]
+address = "{{ADDRESS}}"
+channel = "{{CHANNEL}}"
+name = "{{NAME}}"
+
+[connect.server_password]
+pw = "{{SERVER_PW}}"
+
+[connect.channel_password]
+pw = "{{CHANNEL_PW}}"

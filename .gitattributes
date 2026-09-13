@@ -15,3 +15,6 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+
+# TSBot: batch files must stay CRLF (cmd.exe misreads labels in LF-only files)
+*.cmd -text

@@ -1,0 +1,20 @@
+# Rights for the TSBot build. Two friends on a private room -> everyone may control playback.
+# Admins: local API (this PC) plus any uids listed below.
+
+"+" = [
+	"cmd.help.*", "cmd.pm", "cmd.subscribe", "cmd.unsubscribe", "cmd.kickme.*", "cmd.version",
+	"cmd.song", "cmd.np", "cmd.repeat", "cmd.random",
+	"cmd.if", "cmd.print", "cmd.rng", "cmd.eval", "cmd.take", "cmd.xecute", "cmd.getmy.*", "cmd.json.*", "cmd.bot.use", "cmd.rights.can",
+	"cmd.commands",
+	# play controls
+	"cmd.yt", "cmd.play", "cmd.pause", "cmd.stop", "cmd.seek", "cmd.volume", "cmd.jump",
+	"cmd.list.*", "cmd.add", "cmd.clear", "cmd.previous", "cmd.next", "cmd.skip", "cmd.queue", "cmd.info",
+	"cmd.random.*", "cmd.repeat.*", "cmd.search.*",
+	"cmd.history.add", "cmd.history.from", "cmd.history.id", "cmd.history.last", "cmd.history.play", "cmd.history.till", "cmd.history.title",
+	"cmd.bot.come", "cmd.bot.move", "cmd.bot.info", "cmd.bot.name", "cmd.bot.description.*", "cmd.bot.commander.*",
+]
+
+[[rule]]
+	useruid = [ "_admin_uid_" ]
+	ip = [ "127.0.0.1", "::1" ]
+	"+" = "*"
