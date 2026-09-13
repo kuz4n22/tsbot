@@ -29,7 +29,9 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 	private readonly Id id;
 	private static readonly Regex FindDurationMatch = new(@"^\s*Duration: (\d+):(\d\d):(\d\d).(\d\d)", Util.DefaultRegexConfig);
 	private static readonly Regex IcyMetadataMacher = new("((\\w+)='(.*?)';\\s*)+", Util.DefaultRegexConfig);
-	private const string PreLinkConf = "-hide_banner -nostats -threads 1 -i \"";
+	// TSBot: never let a stalled stream block the bot - ffmpeg gives up after 10 s without data and exits,
+// which surfaces as a normal "song ended" (and the reconnect logic below retries a few times first).
+	private const string PreLinkConf = "-hide_banner -nostats -threads 1 -rw_timeout 10000000 -reconnect 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 4 -i \"";
 	private const string PostLinkConf = "\" -ac 2 -ar 48000 -f s16le -acodec pcm_s16le pipe:1";
 	private const string LinkConfIcy = "-hide_banner -nostats -threads 1 -i pipe:0 -ac 2 -ar 48000 -f s16le -acodec pcm_s16le pipe:1";
 	private static readonly TimeSpan retryOnDropBeforeEnd = TimeSpan.FromSeconds(10);
