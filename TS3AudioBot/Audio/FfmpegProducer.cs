@@ -120,13 +120,14 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 		}
 
 		instance.HasTriedToReconnect = false;
+		instance.ReconnectAttempts = 0;
 		instance.AudioTimer.PushBytes(read);
 		return read;
 	}
 
 	private (bool ret, bool trigger) OnReadEmpty(FfmpegInstance instance)
 	{
-		if (instance.FfmpegProcess.HasExitedSafe() && !instance.HasTriedToReconnect)
+		if (instance.FfmpegProcess.HasExitedSafe() && instance.ReconnectAttempts < 3)
 		{
 			var expectedStopLength = GetCurrentSongLength();
 			Log.Trace("Expected song length {0}", expectedStopLength);
@@ -136,10 +137,15 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 				Log.Trace("Actual song position {0}", actualStopPosition);
 				if (actualStopPosition + retryOnDropBeforeEnd < expectedStopLength)
 				{
-					Log.Debug("Connection to song lost, retrying at {0}", actualStopPosition);
+					var attempt = instance.ReconnectAttempts + 1;
+					Log.Debug("Connection to song lost, retrying at {0} (attempt {1})", actualStopPosition, attempt);
+					instance.ReconnectAttempts = attempt;
 					instance.HasTriedToReconnect = true;
+					if (attempt > 1)
+						Thread.Sleep(1500); // transient CDN errors (400/EOF) usually clear within a second
 					if (SetPosition(actualStopPosition).Get(out var newInstance, out var error))
 					{
+						newInstance.ReconnectAttempts = attempt;
 						newInstance.HasTriedToReconnect = true;
 						return (true, false);
 					}
@@ -312,7 +318,14 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 		}
 	}
 
-	private TimeSpan? GetCurrentSongLength() => ffmpegInstance?.ParsedSongLength;
+	private TimeSpan? lastKnownLength;
+	private TimeSpan? GetCurrentSongLength()
+	{
+		var len = ffmpegInstance?.ParsedSongLength;
+		if (len is { } l && l > TimeSpan.Zero)
+			lastKnownLength = l;
+		return len ?? lastKnownLength;
+	}
 
 	private void AssertNotMainScheduler()
 	{
@@ -329,6 +342,7 @@ public sealed class FfmpegProducer : IPlayerSource, IDisposable
 	{
 		public Process FfmpegProcess { get; }
 		public bool HasTriedToReconnect { get; set; }
+		public int ReconnectAttempts { get; set; }
 		public string ReconnectUrl { get; }
 		public bool IsIcyStream => IcyStream != null;
 

@@ -61,6 +61,7 @@ public sealed class Bot
 	private readonly PlayManager playManager;
 	private readonly IVoiceTarget targetManager;
 	private readonly Player player;
+	private readonly QueueKeeper queueKeeper;
 	private readonly Stats stats;
 	private readonly LocalizationManager localization;
 
@@ -116,6 +117,8 @@ public sealed class Bot
 		player.SetTarget(customTarget);
 		Injector.AddModule(ts3FullClient.Book);
 		playManager = Injector.GetModuleOrThrow<PlayManager>();
+		queueKeeper = new QueueKeeper(config, playManager, Injector.GetModuleOrThrow<PlaylistManager>(), player, Scheduler);
+		Injector.AddModule(queueKeeper);
 		targetManager = Injector.GetModuleOrThrow<IVoiceTarget>();
 		sessionManager = Injector.GetModuleOrThrow<SessionManager>();
 		stats = Injector.GetModuleOrThrow<Stats>();
@@ -231,6 +234,7 @@ public sealed class Bot
 		DisableIdleTickWorker();
 
 		Injector.GetModule<PluginManager>()?.StopPlugins(this);
+		queueKeeper.Dispose(); // final snapshot before the player goes away
 		Injector.GetModule<PlayManager>()?.Stop();
 		Injector.GetModule<Player>()?.Dispose();
 		var tsClient = Injector.GetModule<Ts3Client>();
@@ -243,6 +247,11 @@ public sealed class Bot
 	private async Task OnBotConnected(object? sender, EventArgs e)
 	{
 		EnableIdleTickWorker();
+
+		// TSBot: bring back the queue from the last run, then keep saving it
+		try { await queueKeeper.RestoreAsync(InvokerData.Anonymous); }
+		catch (Exception ex) { Log.Warn(ex, "Queue restore failed"); }
+		queueKeeper.Start();
 
 		var badges = config.Connect.Badges.Value;
 		if (!string.IsNullOrEmpty(badges))
@@ -285,7 +294,16 @@ public sealed class Bot
 
 		var message = textMessage.Message.Trim();
 		if (!(message.Length >= 2 && message[0] == '!' && char.IsLetter(message[1])))
-			return;
+		{
+			// TSBot: a bare media link pasted into the chat plays it
+			var quick = QuickPlay.TryRewriteBareLink(message);
+			if (quick is null && textMessage.Target == TSLib.TextMessageTargetMode.Private)
+				quick = "!commands"; // someone talks to the bot in private without a command -> show how to use it
+			if (quick is null)
+				return;
+			Log.Info("Plain message from {0} treated as: {1}", textMessage.InvokerName, quick);
+			message = quick;
+		}
 		textMessage.Message = message;
 
 		if (!localization.LanguageLoaded)

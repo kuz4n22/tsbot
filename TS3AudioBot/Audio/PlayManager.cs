@@ -283,7 +283,12 @@ public class PlayManager
 				await Next(CurrentPlayData?.Invoker ?? InvokerData.Anonymous, false);
 				return;
 			}
-			catch (AudioBotException ex) { Log.Info("Song queue ended: {0}", ex.Message); }
+			catch (AudioBotException ex)
+			{
+				Log.Info("Song queue ended: {0}", ex.Message);
+				if (await TryAutoplay())
+					return;
+			}
 		}
 		else
 		{
@@ -292,6 +297,36 @@ public class PlayManager
 
 		CurrentPlayData = null;
 		PlaybackStopped?.Invoke(this, EventArgs.Empty);
+	}
+
+	/// <summary>TSBot: when the queue is exhausted, keep the music going with a YouTube radio-mix (RD&lt;id&gt;) seeded from the last song.</summary>
+	private async Task<bool> TryAutoplay()
+	{
+		if (!confBot.Audio.Autoplay)
+			return false;
+		var last = CurrentPlayData;
+		var ar = last?.ResourceData;
+		if (last is null || ar is null || ar.AudioType != "youtube" || string.IsNullOrEmpty(ar.ResourceId))
+			return false;
+		try
+		{
+			var mixUrl = $"https://www.youtube.com/watch?v={ar.ResourceId}&list=RD{ar.ResourceId}";
+			var plist = await resourceResolver.LoadPlaylistFrom(mixUrl, CancellationToken.None);
+			var fresh = plist.Items.Where(i => i.AudioResource.ResourceId != ar.ResourceId).ToList();
+			if (fresh.Count == 0)
+				return false;
+			var startOff = playlistManager.CurrentList.Items.Count;
+			playlistManager.Queue(fresh.Select(x => UpdateItem(x, last.Invoker)));
+			playlistManager.Index = startOff;
+			Log.Info("Autoplay: queued {0} related track(s) from mix of {1}", fresh.Count, ar.ResourceId);
+			await StartCurrent(last.Invoker, false);
+			return true;
+		}
+		catch (AudioBotException ex)
+		{
+			Log.Info("Autoplay failed: {0}", ex.Message);
+			return false;
+		}
 	}
 
 	public async Task Update(SongInfoChanged newInfo)

@@ -77,6 +77,17 @@ public class ConfTools : ConfigTable
 	public ConfToolsFfmpeg Ffmpeg { get; } = Create<ConfToolsFfmpeg>("ffmpeg",
 		"The path to ffmpeg.");
 	//public ConfPath Ffprobe { get; } = Create<ConfPath>("ffprobe");
+	public ConfBypass Bypass { get; } = Create<ConfBypass>("bypass",
+		"TSBot: optional DPI-bypass proxy (ByeDPI/ciadpi) used only by the bot's yt-dlp and ffmpeg.");
+}
+
+public class ConfBypass : ConfigTable
+{
+	public ConfigValue<bool> Enabled { get; } = new("enabled", false, "Start the bypass proxy and route yt-dlp/ffmpeg through it.");
+	public ConfigValue<string> Path { get; } = new("path", "", "Path to ciadpi.exe (ByeDPI). Empty = do not start anything, just use the 'socks' endpoint.");
+	public ConfigValue<string> Args { get; } = new("args", "--ip 127.0.0.1 --port 1080 --auto=torst,ssl_err --split 1+s --disorder 3+s", "Command line for ciadpi.");
+	public ConfigValue<string> Socks { get; } = new("socks", "127.0.0.1:1080", "SOCKS5 endpoint of the bypass proxy.");
+	public ConfigValue<ushort> BridgePort { get; } = new("bridge_port", 58914, "Local HTTP CONNECT port (ffmpeg cannot use SOCKS) bridged to the SOCKS5 proxy.");
 }
 
 public class ConfToolsFfmpeg : ConfigTable
@@ -227,6 +238,7 @@ public class ConfAudio : ConfigTable
 	public ConfigValue<int> Bitrate { get; } = new("bitrate", 48, "Specifies the bitrate (in kbps) for sending audio.\n" +
 		"Values between 8 and 98 are supported, more or less can work but without guarantees.\n" +
 		"Reference values: 16 - very poor (~3KiB/s), 24 - poor (~4KiB/s), 32 - okay (~5KiB/s), 48 - good (~7KiB/s), 64 - very good (~9KiB/s), 96 - deluxe (~13KiB/s)");
+	public ConfigValue<bool> Autoplay { get; } = new("autoplay", true, "TSBot: when the queue ends, keep playing related YouTube tracks (radio-mix from the last song). Stops when the bot is left alone (see bot.events.onalone).");
 	public ConfigValue<string> SendMode { get; } = new("send_mode", "voice", "How the bot should play music. Options are:\n" +
 		" - whisper : Whispers to the channel where the request came from. Other users can join with '!subscribe'.\n" +
 		" - voice : Sends via normal voice to the current channel. '!subscribe' will not work in this mode.\n" +

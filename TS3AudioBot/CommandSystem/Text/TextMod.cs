@@ -30,7 +30,11 @@ public record struct TextMod(TextModFlag Flags, Color? HasColor = null) : IEquat
 			return Format(format, para);
 		if (string.IsNullOrEmpty(format.Text))
 			return string.Empty;
-		return string.Format(format.Text, para);
+		// no-color: string.Format needs object[]; passing AppliedTextMod[] makes {0} print the array type. Use each mod's plain text.
+		var args = new object?[para.Length];
+		for (int i = 0; i < para.Length; i++)
+			args[i] = para[i].Text;
+		return string.Format(format.Text, args);
 	}
 
 	public readonly bool Equals(TextMod other) => Flags == other.Flags && HasColor == other.HasColor;

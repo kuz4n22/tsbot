@@ -130,6 +130,16 @@ public sealed class ResourceResolver : IDisposable
 			return await resolver.GetResource(ctx, netlinkurl, cancellationToken);
 		}
 
+		// TSBot: free text is not a link -> search it on YouTube and take the first hit
+		if (!QuickPlay.LooksLikeLinkOrPath(netlinkurl))
+		{
+			var found = await Search(ctx, "youtube", netlinkurl.Trim(), cancellationToken);
+			if (found.Count == 0)
+				throw CouldNotLoad($"YouTube: nothing found for '{netlinkurl.Trim()}'");
+			Log.Info("Search '{0}' -> {1}", netlinkurl, found[0].ResourceTitle);
+			return await Load(ctx, found[0], cancellationToken);
+		}
+
 		var resolvers = FilterUsable(GetResResolverByLink(ctx, netlinkurl));
 		List<(string, AudioBotException)>? errors = null;
 		foreach (var resolver in resolvers)

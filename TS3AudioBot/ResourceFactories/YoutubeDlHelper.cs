@@ -151,7 +151,7 @@ public static class YoutubeDlHelper
 			tmproc.ErrorDataReceived += (s, e) => stdErr.Append(e.Data);
 			tmproc.BeginOutputReadLine();
 			tmproc.BeginErrorReadLine();
-			await tmproc.WaitForExitAsync(TimeSpan.FromSeconds(20), cancellationToken);
+			await tmproc.WaitForExitAsync(TimeSpan.FromSeconds(60), cancellationToken);
 
 			if (!tmproc.HasExitedSafe())
 			{

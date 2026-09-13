@@ -48,7 +48,7 @@ using TSLib.Messages;
 
 namespace TS3AudioBot;
 
-public static class MainCommands
+public static partial class MainCommands
 {
 	internal static ICommandBag Bag { get; } = new MainCommandsBag();
 
@@ -71,7 +71,7 @@ public static class MainCommands
 	// ReSharper disable UnusedMember.Global
 	[Command("add")]
 	public static async Task CommandAdd(PlayManager playManager, InvokerData invoker, string url, params string[] attributes)
-		=> await playManager.Enqueue(invoker, url, meta: PlayManager.ParseAttributes(attributes));
+		=> await playManager.Enqueue(invoker, JoinFreeText(url, attributes), meta: PlayManager.ParseAttributes(attributes));
 
 	[Command("add")]
 	public static async Task CommandAdd(PlayManager playManager, InvokerData invoker, IAudioResourceResult rsc, params string[] attributes)
@@ -1108,8 +1108,8 @@ public static class MainCommands
 	}
 
 	[Command("next")]
-	public static async Task CommandNext(PlayManager playManager, InvokerData invoker)
-		=> await playManager.Next(invoker);
+	public static async Task<string> CommandNext(PlayManager playManager, InvokerData invoker)
+		=> await SkipCurrent(playManager, invoker);
 
 	[Command("param", "_undocumented")] // TODO add documentation, when name decided
 	public static async Task<object?> CommandParam(ExecutionInformation info, int index)
@@ -1157,7 +1157,7 @@ public static class MainCommands
 
 	[Command("play")]
 	public static async Task CommandPlay(PlayManager playManager, InvokerData invoker, string url, params string[] attributes)
-		=> await playManager.Play(invoker, url, meta: PlayManager.ParseAttributes(attributes));
+		=> await playManager.Play(invoker, JoinFreeText(url, attributes), meta: PlayManager.ParseAttributes(attributes));
 
 	[Command("play")]
 	public static async Task CommandPlay(PlayManager playManager, InvokerData invoker, IAudioResourceResult rsc, params string[] attributes)

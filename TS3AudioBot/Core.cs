@@ -84,6 +84,7 @@ public sealed class Core
 
 		Upgrader.PerformUpgrades(injector);
 		YoutubeDlHelper.DataObj = config.Tools.YoutubeDl;
+		NetworkBypass.Start(config.Tools.Bypass);
 
 		injector.GetModuleOrThrow<CommandManager>().RegisterCollection(MainCommands.Bag);
 		injector.GetModuleOrThrow<RightsManager>().CreateConfigIfNotExists(setup.Interactive);
@@ -136,6 +137,7 @@ public sealed class Core
 		injector.GetModule<DbStore>()?.Dispose();
 		injector.GetModule<ResourceResolver>()?.Dispose();
 		injector.GetModule<DedicatedTaskScheduler>()?.Dispose();
+		NetworkBypass.Stop();
 
 		Log.Info("Bye");
 	}
