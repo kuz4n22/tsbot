@@ -1,143 +1,73 @@
-# TS3AudioBot
+# TSBot — музыкальный бот для TeamSpeak
 
-This is a open-source TeamSpeak3 bot, playing music and much more.  
+Сидит в вашей комнате и играет YouTube: ссылки, плейлисты, поиск по названию. Это [TS3AudioBot](https://github.com/Splamy/TS3AudioBot) с доработками: кинул ссылку — заиграло, очередь переживает перезапуск, автопродолжение похожими треками, YouTube без VPN.
 
-- **Got questions?** Check out our [Wiki](https://github.com/Splamy/TS3AudioBot/wiki), [FAQ](https://github.com/Splamy/TS3AudioBot/wiki/FAQ), or ask on our [![Join Gitter Chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/TS3AudioBot/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
-- **Something's broken or it's complicated?** [Open an issue](https://github.com/Splamy/TS3AudioBot/issues/new/choose)
-  - Please use and fill out one of the templates we provide unless they are not applicable or you have a good reason not to.  
-    This helps us getting through the technical stuff faster
-  - Please keep issues in english, this makes it easier for everyone to participate and keeps issues relevant to link to.
-- **Want to support this Project?**
-  - You can discuss and suggest features. However the [backlog](https://github.com/Splamy/TS3AudioBot/projects/2) is large and feature requests will probably take time
-  - You can contribute code. This is always appreciated, please open an issue or contact a maintainer to discuss *before* you start.
-  - You can support me on [![Patreon][patreon-badge]][patreon-link] or [![Paypal][paypal-badge]][paypal-link]
+## Установка (Windows 10/11)
 
-[patreon-badge]: https://img.shields.io/badge/Patreon-Donate!-F96854.svg?logo=patreon&style=flat-square
-[patreon-link]: https://patreon.com/Splamy
+PowerShell → вставить → Enter:
 
-[paypal-badge]: https://img.shields.io/badge/Paypal-Donate!-00457C.svg?logo=paypal&style=flat-square
-[paypal-link]: https://paypal.me/Splamy
+```powershell
+irm https://raw.githubusercontent.com/kuz4n22/tsbot/tsbot/install.ps1 | iex
+```
 
-## Features
-* Play Youtube and Soundcloud songs as well as stream Twitch (extensible with plugins)
-* Song history
-* Various voice subscription modes; including to clients, channels and whisper groups
-* Playlist management for all users
-* Powerful permission configuration
-* Plugin support
-* Web API
-* Multi-instance
-* Localization
-* Low CPU and memory with our self-written headless ts3 client
+Спросит адрес сервера, комнату и пароли — и всё: скачает, настроит, запустит. Ставится в `%USERPROFILE%\TSBot`, без прав администратора, ничего системного не трогает.
 
-To see what's planned and in progress take a look into our [Roadmap](https://github.com/Splamy/TS3AudioBot/projects/2).
+Без вопросов, одной строкой:
 
-## Bot Commands
-The bot is fully operable via chat.  
-To get started write `!help` to the bot.  
-For all commands check out our live [OpenApiV3 generator](http://tab.splamy.de/openapi/index.html).  
-For an in-depth command tutorial see [here in the wiki](https://github.com/Splamy/TS3AudioBot/wiki/CommandSystem).
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/kuz4n22/tsbot/tsbot/install.ps1))) -Address "host:port" -Channel "Комната" -ChannelPassword "пароль" -Name "DJ Bot"
+```
 
-## Install
+Вручную: скачать `TSBot-win-x64.zip` из [Releases](https://github.com/kuz4n22/tsbot/releases), распаковать, запустить `Setup.cmd`.
 
-### Download
-Pick and download the build for your platform and liking:
+## Как пользоваться
 
-|  | Stable | Experimental |
-| -- | -- | -- |
-| | Versions are mostly considered stable but won't get bigger features as fast. | Will always have the latest and greatest but might not be fully stable or have broken features. |
-| Windows_x64 | [![Download](https://img.shields.io/badge/Download-master-green.svg)](https://splamy.de/api/nightly/ts3ab/master_win_x64/download) | [![Download](https://img.shields.io/badge/Download-develop-green.svg)](https://splamy.de/api/nightly/ts3ab/develop_win_x64/download) |
-| Linux_x64 | [![Download](https://img.shields.io/badge/Download-master-green.svg)](https://splamy.de/api/nightly/ts3ab/master_linux_x64/download) | [![Download](https://img.shields.io/badge/Download-develop-green.svg)](https://splamy.de/api/nightly/ts3ab/develop_linux_x64/download) |
-| Docker | [![Docker](https://img.shields.io/badge/Docker-0.11.0-0db7ed.svg)](https://github.com/getdrunkonmovies-com/TS3AudioBot_docker) (NOTE: This build is community-maintained. It comes with all dependencies as well as youtube-dl preconfigured) | - |
+Пиши боту в личку:
 
-(We have more builds like linux arm/arm64 and .NET framework dependent builds available on our [nightly server](https://splamy.de/Nightly#ts3ab))
+| Что написать | Что будет |
+|---|---|
+| ссылка на YouTube | включит сразу или добавит в очередь; плейлист — целиком |
+| `!yt название` | найдёт на YouTube и включит |
+| `!skip` | следующий трек |
+| `!pause` / `!play` | пауза / дальше |
+| `!stop` | стоп |
+| `!np` | что играет |
+| `!queue` / `!clear` | очередь / очистить |
+| `!volume 20` | громкость 0–100 |
+| `!bot come` | позвать бота к себе в канал |
+| `!commands` | шпаргалка в чате |
 
-#### Linux
-Install the required dependencies for your distro:
-* on **Ubuntu**/**Debian**:  
-Run `sudo apt-get install libopus-dev ffmpeg`
-* on **Arch Linux**:  
-Run `sudo pacman -S opus ffmpeg`
-* on **CentOS 7**:  
-Run
-    ```
-    sudo yum -y install epel-release
-    sudo rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-5.el7.nux.noarch.rpm
-    sudo yum -y install ffmpeg opus-devel
-	```
-* or **manually**:
-    1. Make sure you have a C compiler installed
-    1. Make the Opus script runnable with `chmod u+x InstallOpus.sh` and run it with `./InstallOpus.sh`
-    1. Get the ffmpeg [32bit](https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-i686-static.tar.xz) or [64bit](https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz) binary.
-    1. Extract the ffmpeg archive with `tar -vxf ffmpeg-git-*XXbit*-static.tar.xz`
-    1. Get the ffmpeg binary from `ffmpeg-git-*DATE*-amd64-static/ffmpeg` and copy it into your TS3AudioBot folder.
+Очередь кончилась — бот сам продолжает похожими треками. Остался один в канале — через 3 минуты замолкает.
 
-#### Windows
-1. Get the ffmpeg [32bit](https://ffmpeg.zeranoe.com/builds/win32/static/ffmpeg-latest-win32-static.zip) or [64bit](https://ffmpeg.zeranoe.com/builds/win64/static/ffmpeg-latest-win64-static.zip) binary.
-1. Open the archive and copy the ffmpeg binary from `ffmpeg-latest-winXX-static/bin/ffmpeg.exe` into your TS3AudioBot folder.
+## Запуск и остановка
 
-### Optional Dependencies
-If the bot can't play some youtube videos it might be due to some embedding restrictions which are blocking this.  
-You can install the [youtube-dl](https://github.com/rg3/youtube-dl/) binary or source folder (and specify the path in the config) to try to bypass this.
+| В папке бота | Что делает |
+|---|---|
+| `Start TSBot.cmd` — он же ярлык «TS Music Bot» на рабочем столе | запустить; свёрнутое окно — сторож, перезапустит бота, если тот упадёт |
+| `Stop TSBot.cmd` | остановить |
+| `Check YouTube.cmd` | открывается ли YouTube, работает ли обход |
+| `Update yt-dlp.cmd` | если ссылки перестали открываться (YouTube что-то поменял) |
 
-### First time setup
-1. Run the bot with `./TS3AudioBot` (Linux) or `TS3AudioBot.exe` (Windows) and follow the setup instructions.
-1. (Optional) Close the bot and configure your `rights.toml` to your desires.
-You can use the template rules as suggested in the automatically generated file,
-or dive into the rights syntax [here](https://github.com/Splamy/TS3AudioBot/wiki/Rights).
-Then start the bot again.
-1. (Optional, but highly recommended for everything to work properly).
-   - Create a privilege key for the ServerAdmin group (or a group which has equivalent rights).
-   - Send the bot in a private message `!bot setup <privilege key>`.
-1. Congratz, you're done! Enjoy listening to your favourite music, experimenting with the crazy command system or do whatever you wish to do ;).  
-For further reading check out the [CommandSystem](https://github.com/Splamy/TS3AudioBot/wiki/CommandSystem).
+Автозапуск при входе в Windows: `Win+R` → `shell:startup` → скопировать туда ярлык.
 
-## Building manually
+## Настройки
 
-|master|develop|
-|:--:|:--:|
-|[![Build status](https://ci.appveyor.com/api/projects/status/i7nrhqkbntdhwpxp/branch/master?svg=true)](https://ci.appveyor.com/project/Splamy/ts3audiobot/branch/master)|[![Build status](https://ci.appveyor.com/api/projects/status/i7nrhqkbntdhwpxp/branch/develop?svg=true)](https://ci.appveyor.com/project/Splamy/ts3audiobot/branch/develop)|
+- `bot\bots\dj\bot.toml` — сервер (`address`), комната (`channel`), пароли, имя бота.
+- `bot\ts3audiobot.toml` — громкость, автопродолжение (`autoplay`), обход блокировки (`[tools.bypass]`).
+- `bot\rights.toml` — кто чем может управлять (сейчас — все).
+- Веб-панель: http://localhost:58913 (только с этого компьютера).
 
-### Download
-Download the git repository with `git clone --recurse-submodules https://github.com/Splamy/TS3AudioBot.git`.
+После правок — Stop, потом Start. Обновить бота — запустить установку ещё раз: настройки и очередь сохранятся.
 
-#### Linux
-1. Get the `.NET 5.0` sdk by following [this tutorial](https://docs.microsoft.com/dotnet/core/install/linux-package-managers) and choose your platform
-1. Go into the directory of the repository with `cd TS3AudioBot`
-1. Execute `dotnet build --framework net5.0 --configuration Release TS3AudioBot` to build the AudioBot
-1. The binary will be in `./TS3AudioBot/bin/Release/net5.0` and can be run with `dotnet TS3AudioBot.dll`
+## YouTube без VPN
 
-#### Windows
-1. Make sure you have `Visual Studio` with the `.NET 5.0` development toolchain installed
-1. Build the AudioBot with Visual Studio.
+Свои запросы бот гоняет через локальный обход DPI ([ByeDPI](https://github.com/hufrea/byedpi)) — только свой трафик, система не затрагивается. При запуске сам проверяет, нужен ли обход, и подбирает рабочую стратегию; там, где YouTube не блокируют, обход просто простаивает. Если провайдер режет по IP, а не по DPI — поможет только VPN.
 
-### Building the WebInterface
-1. Go with the console of your choice into the `./WebInterface` folder
-1. Run `yarn install` to restore or update all dependencies for this project
-1. Run `yarn run build` to build the project.  
-  The built project will be in `./WebInterface/dist`.  
-  Make sure to the set the webinterface path in the ts3audiobot.toml to this folder.
-1. You can alternatively use `yarn run start` for development.  
-  This will use the webpack dev server with live reload instead of the ts3ab server.
+## Что внутри
 
-## Community
+- `TS3AudioBot/` — исходники бота: ветка `develop` оригинала + патчи (в коде помечены `TSBot`).
+- `tsbot/scripts/`, `tsbot/config/` — скрипты запуска и шаблоны конфигов; `install.ps1` — установщик.
+- `.github/workflows/` — сборка `TSBot-win-x64.zip` для Releases по тегу `v*`.
+- Linux: `dotnet publish TS3AudioBot -c Release` (.NET 8 SDK, ffmpeg, yt-dlp, deno, libopus); установщика нет.
 
-### Localization
-:speech_balloon: *Want to help translate or improve translation?*  
-Join us on [Transifex](https://www.transifex.com/respeak/ts3audiobot/) to help translate  
-or in our [Gitter](https://gitter.im/TS3AudioBot/Lobby?utm_source=share-link&utm_medium=link&utm_campaign=share-link) to discuss or ask anything!  
-All help is appreciated :heart:
-
-Translations need to be manually approved and will then be automatically built and deployed to [our nightly server here](https://splamy.de/TS3AudioBot).
-
-## License
-This project is licensed under [OSL-3.0](https://opensource.org/licenses/OSL-3.0).
-
-Why OSL-3.0:
-- OSL allows you to link to our libraries without needing to disclose your own project, which might be useful if you want to use the TSLib as a library.
-- If you create plugins you do not have to make them public like in GPL. (Although we would be happy if you shared them :)
-- With OSL we want to allow you providing the TS3AB as a service (even commercially). We do not want the software to be sold but the service. We want this software to be free for everyone.
-- TL; DR? https://tldrlegal.com/license/open-software-licence-3.0
-
----
-[![forthebadge](http://forthebadge.com/images/badges/60-percent-of-the-time-works-every-time.svg)](http://forthebadge.com) [![forthebadge](http://forthebadge.com/images/badges/built-by-developers.svg)](http://forthebadge.com) [![forthebadge](http://forthebadge.com/images/badges/built-with-love.svg)](http://forthebadge.com) [![forthebadge](http://forthebadge.com/images/badges/contains-cat-gifs.svg)](http://forthebadge.com) [![forthebadge](http://forthebadge.com/images/badges/made-with-c-sharp.svg)](http://forthebadge.com)
+Лицензия — [OSL-3.0](LICENSE), как у оригинала.
